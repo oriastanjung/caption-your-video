@@ -90,6 +90,25 @@ describe("CaptionVideo", () => {
     expect(formatted[0]!.captions).toEqual([{ first: 0, last: 1, keywords: [1] }]);
   });
 
+  test("splits captions that are too long to read in one glance", async () => {
+    const long: Word[] = ["Di", "diagram", "entitas", "digambar", "pakai", "persegi"].map((text, index) => ({
+      text,
+      start: index,
+      end: index + 1,
+    }));
+    const { useCase, formatted } = setup({
+      transcribed: long,
+      plan: { captions: [{ first: 0, last: 5, text: "Di diagram entitas digambar pakai persegi" }] },
+    });
+
+    await useCase.execute({ input: "in.mp4", output: "out.mp4", context: "" });
+
+    expect(formatted[0]!.captions).toEqual([
+      { first: 0, last: 2, keywords: [] },
+      { first: 3, last: 5, keywords: [] },
+    ]);
+  });
+
   test("streams every planned caption to the reporter", async () => {
     const { useCase, planned } = setup();
 
