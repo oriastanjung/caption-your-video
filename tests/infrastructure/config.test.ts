@@ -8,7 +8,7 @@ describe("loadConfig", () => {
     const config = loadConfig(required);
 
     expect(config.anthropic).toEqual({ apiKey: "sk-test", baseURL: undefined, model: "claude-haiku-5-5" });
-    expect(config.whisper).toEqual({ model: "large-v3-turbo", python: undefined });
+    expect(config.whisper).toEqual({ model: "large-v3-turbo", python: undefined, language: undefined });
     expect(config.theme.active).toEqual({ red: 0xf9, green: 0xd0, blue: 0x54 });
     expect(config.theme.boxOpacity).toBe(0.95);
   });
@@ -24,10 +24,10 @@ describe("loadConfig", () => {
     expect(config.anthropic.model).toBe("willow");
   });
 
-  test("reads the Whisper model and an optional Python with Whisper preinstalled", () => {
-    const config = loadConfig({ ...required, WHISPER_MODEL: "small", WHISPER_PYTHON: "python3" });
+  test("reads the Whisper model, language and an optional Python with Whisper preinstalled", () => {
+    const config = loadConfig({ ...required, WHISPER_MODEL: "small", WHISPER_PYTHON: "python3", WHISPER_LANGUAGE: "id" });
 
-    expect(config.whisper).toEqual({ model: "small", python: "python3" });
+    expect(config.whisper).toEqual({ model: "small", python: "python3", language: "id" });
   });
 
   test("reads caption colors from the environment", () => {

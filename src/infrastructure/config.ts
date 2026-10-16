@@ -6,7 +6,7 @@ export class ConfigError extends Error {
 
 export type Config = {
   anthropic: { apiKey: string; baseURL: string | undefined; model: string };
-  whisper: { model: string; python: string | undefined };
+  whisper: { model: string; python: string | undefined; language: string | undefined };
   theme: CaptionTheme;
 };
 
@@ -43,7 +43,7 @@ export function loadConfig(env: Env): Config {
 
   return {
     anthropic: { apiKey, baseURL: read("ANTHROPIC_BASE_URL"), model: withDefault("ANTHROPIC_MODEL") },
-    whisper: { model: withDefault("WHISPER_MODEL"), python: read("WHISPER_PYTHON") },
+    whisper: { model: withDefault("WHISPER_MODEL"), python: read("WHISPER_PYTHON"), language: read("WHISPER_LANGUAGE") },
     theme: {
       box: parse("CAPTION_BOX_COLOR", parseHexColor),
       boxOpacity: parse("CAPTION_BOX_OPACITY", parseOpacity),

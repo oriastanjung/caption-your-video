@@ -9,13 +9,21 @@ from faster_whisper import WhisperModel
 
 
 def main() -> None:
-    if len(sys.argv) != 3:
-        print("usage: transcribe.py <video> <whisper-model>", file=sys.stderr)
+    if len(sys.argv) != 4:
+        print("usage: transcribe.py <video> <whisper-model> <language|auto>", file=sys.stderr)
         sys.exit(2)
-    video_path, model_name = sys.argv[1], sys.argv[2]
+    video_path, model_name, language = sys.argv[1:4]
 
     model = WhisperModel(model_name, device="cpu", compute_type="int8")
-    segments, info = model.transcribe(video_path, word_timestamps=True, vad_filter=True)
+    segments, info = model.transcribe(
+        video_path,
+        language=None if language == "auto" else language,
+        word_timestamps=True,
+        vad_filter=True,
+        # Feeding earlier text back in makes Whisper repeat itself over silence and noise.
+        condition_on_previous_text=False,
+        beam_size=5,
+    )
 
     words = []
     for segment in segments:

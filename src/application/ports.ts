@@ -1,4 +1,4 @@
-import type { Caption, CaptionPlan } from "../domain/caption";
+import type { Caption, CaptionPlan, PlannedCaption } from "../domain/caption";
 import type { FrameSize } from "../domain/frame-size";
 import type { Word } from "../domain/word";
 
@@ -7,7 +7,7 @@ export interface Transcriber {
 }
 
 export interface CaptionPlanner {
-  plan(words: Word[], onCaption: (caption: Caption) => void): Promise<CaptionPlan>;
+  plan(words: Word[], context: string, onCaption: (caption: PlannedCaption) => void): Promise<CaptionPlan>;
 }
 
 export interface SubtitleFormatter {
@@ -21,5 +21,5 @@ export interface VideoEditor {
 
 export interface ProgressReporter {
   stage(message: string): void;
-  captionPlanned(caption: Caption, words: Word[]): void;
+  captionPlanned(caption: PlannedCaption): void;
 }

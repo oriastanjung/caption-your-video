@@ -38,3 +38,6 @@ input/*
 !input/.gitkeep
 output/*
 !output/.gitkeep
+
+# browser automation artifacts
+.playwright-mcp/
