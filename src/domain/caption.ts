@@ -12,15 +12,19 @@ export class InvalidCaptionPlanError extends Error {
 const ATTACHES_TO_PREVIOUS = /^[-,.!?;:)%]/;
 
 export function assertValidCaptionPlan(plan: CaptionPlan, wordCount: number): void {
-  let expectedFirst = 0;
-  for (const caption of plan.captions) {
+  assertCaptionsCover(plan.captions, 0, wordCount - 1);
+}
+
+export function assertCaptionsCover(captions: PlannedCaption[], first: number, last: number): void {
+  let expectedFirst = first;
+  for (const caption of captions) {
     if (caption.first !== expectedFirst || caption.last < caption.first) {
       throw new InvalidCaptionPlanError(`Captions have a gap or overlap at word ${expectedFirst}`);
     }
     expectedFirst = caption.last + 1;
   }
-  if (expectedFirst !== wordCount) {
-    throw new InvalidCaptionPlanError(`Captions cover ${expectedFirst} of ${wordCount} words`);
+  if (expectedFirst !== last + 1) {
+    throw new InvalidCaptionPlanError(`Captions cover words ${first}-${expectedFirst - 1} of ${first}-${last}`);
   }
 }
 

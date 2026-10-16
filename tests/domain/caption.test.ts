@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   InvalidCaptionPlanError,
+  assertCaptionsCover,
   assertValidCaptionPlan,
   captionWindow,
   joinWords,
@@ -41,6 +42,21 @@ describe("assertValidCaptionPlan", () => {
   test("rejects a caption whose range runs backwards", () => {
     const plan = { captions: [caption(0, 1), caption(3, 2)] };
     expect(() => assertValidCaptionPlan(plan, words.length)).toThrow(InvalidCaptionPlanError);
+  });
+});
+
+describe("assertCaptionsCover", () => {
+  test("accepts captions that cover a slice of the transcript in order", () => {
+    const captions = [
+      { first: 4, last: 5, text: "a" },
+      { first: 6, last: 9, text: "b" },
+    ];
+    expect(() => assertCaptionsCover(captions, 4, 9)).not.toThrow();
+  });
+
+  test("rejects captions that start or end outside the slice", () => {
+    expect(() => assertCaptionsCover([{ first: 3, last: 9, text: "a" }], 4, 9)).toThrow(InvalidCaptionPlanError);
+    expect(() => assertCaptionsCover([{ first: 4, last: 8, text: "a" }], 4, 9)).toThrow(InvalidCaptionPlanError);
   });
 });
 
