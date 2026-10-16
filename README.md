@@ -26,8 +26,9 @@ Captions in motion: upcoming words are grey, the spoken word lights up yellow, s
 ## Features
 
 - Word-level timing from local Whisper (`large-v3-turbo` by default). Works for any language Whisper supports; tested with English and Indonesian.
-- Claude plans the captions: short one-line chunks that follow the speaker's rhythm, highlighted keywords, and fixes for obvious transcription mistakes.
-- Live progress in the terminal: transcript lines, each caption as Claude streams it, then the ffmpeg render.
+- Claude plans the captions: short one-line chunks that follow the speaker's rhythm, highlighted keywords, misheard words fixed from context, and lines Whisper made up dropped. Long videos are planned in chunks.
+- Optional `input/context.txt` with names, terms or the speaker's script for hard audio.
+- Live progress in the terminal: transcript lines, captions as each chunk is planned, then the ffmpeg render.
 - Caption colors and box opacity are set from `.env`.
 - Works with the official Anthropic API, [9router](https://github.com/decolua/9router), or any Anthropic-compatible gateway: set `ANTHROPIC_BASE_URL`.
 - Runs natively with Bun or as a one-shot Docker container.
@@ -71,6 +72,19 @@ bun run start
 
 The result is written to `output/output.mp4`, with the subtitle file next to it as `output/output.ass`. The input file must be named `input/input.mp4`.
 
+### Better captions for hard videos: add context
+
+Poor audio, names, acronyms and technical terms are where speech recognition goes wrong. Put what you know about the video in `input/context.txt`, and both Whisper and Claude use it:
+
+```text
+Speaker: Dina, data engineer at Example Corp.
+Terms: Kubernetes, Docker Compose, PostgreSQL, ETL.
+```
+
+You can also paste the script the speaker read from. Claude uses it to fix misheard words, but keeps what was actually said when the speaker strays from it. Whisper reads the first 600 characters as a vocabulary hint, so put names and terms first. Setting `WHISPER_LANGUAGE` (for example `id` or `en`) also helps on noisy audio.
+
+The transcript is saved to `output/transcript.json`. Running again with the same video, Whisper settings and context skips transcription, so you can change the model, the colors or the prompt and get a new render in a fraction of the time.
+
 The first run downloads the Whisper model (about 1.6 GB). Docker keeps it in the `whisper-models` volume and native runs keep it in `~/.cache/huggingface`, so later runs start right away.
 
 ### Docker build and run times
@@ -97,6 +111,7 @@ All settings live in `.env`. See [.env.example](.env.example).
 | `ANTHROPIC_BASE_URL` | Anthropic API | Base URL of an Anthropic-compatible gateway |
 | `ANTHROPIC_MODEL` | `claude-haiku-5-5` | Model that plans the captions |
 | `WHISPER_MODEL` | `large-v3-turbo` | `tiny`, `base`, `small`, `medium`, `large-v3`, `large-v3-turbo` |
+| `WHISPER_LANGUAGE` | empty (auto) | Spoken language code such as `en` or `id`. Setting it avoids wrong guesses on noisy audio |
 | `HF_TOKEN` | empty | Optional Hugging Face token for faster model downloads |
 | `WHISPER_PYTHON` | empty | Python that already has the Whisper packages. The Docker image sets it; leave it empty to let uv handle them |
 | `CAPTION_BOX_COLOR` | `#4D5B4A` | Caption box color |
@@ -116,15 +131,16 @@ ANTHROPIC_BASE_URL=https://your-9router-host/v1
 ANTHROPIC_MODEL=your-combo-name
 ```
 
-Caption quality depends on the model. A model that ignores the caption rules may produce long captions or no keywords.
+Caption quality depends on the model. Long captions are always split to fit on screen, but how well misheard words get fixed depends on how capable the model is. For hard videos, pick the strongest model you have access to.
 
 ## How it works
 
 ```
 input/input.mp4
-  -> Whisper (local)            words with start and end times
-  -> Claude                     caption breaks, keywords, spelling fixes
-  -> domain rules               the plan must cover every word, in order
+  + input/context.txt (optional) names, terms or script
+  -> Whisper (local)            words with start and end times, cached
+  -> Claude, in chunks          caption breaks, fixed text, keywords, invented lines dropped
+  -> domain rules               every word covered in order, long captions split
   -> ASS subtitles + ffmpeg     rounded box, word-by-word color, pop-in
   -> output/output.mp4
 ```
