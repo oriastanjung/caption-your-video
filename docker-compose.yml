@@ -1,0 +1,14 @@
+name: caption-your-video
+
+services:
+  captioner:
+    build: .
+    env_file: .env
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - ./input:/app/input:ro
+      - ./output:/app/output
+      - whisper-models:/opt/huggingface
+
+volumes:
+  whisper-models:

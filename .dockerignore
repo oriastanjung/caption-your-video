@@ -1,0 +1,10 @@
+.env
+.git
+.github
+node_modules
+input
+output
+docs
+tests
+*.md
+!prompts/*.md
