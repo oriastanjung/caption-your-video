@@ -21,7 +21,7 @@ export class CaptionVideo {
     const { transcriber, planner, formatter, videoEditor, reporter } = this.deps;
 
     reporter.stage("Transcribing speech");
-    const words = await transcriber.transcribe(input, context);
+    const words = await transcriber.transcribe(input);
     if (words.length === 0) throw new NoSpeechFoundError(`No speech found in ${input}`);
 
     reporter.stage(`Planning captions for ${words.length} words`);

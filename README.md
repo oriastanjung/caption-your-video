@@ -74,16 +74,16 @@ The result is written to `output/output.mp4`, with the subtitle file next to it 
 
 ### Better captions for hard videos: add context
 
-Poor audio, names, acronyms and technical terms are where speech recognition goes wrong. Put what you know about the video in `input/context.txt`, and both Whisper and Claude use it:
+Poor audio, names, acronyms and technical terms are where speech recognition goes wrong. Put what you know about the video in `input/context.txt`, and Claude uses it to fix what Whisper misheard:
 
 ```text
 Speaker: Dina, data engineer at Example Corp.
 Terms: Kubernetes, Docker Compose, PostgreSQL, ETL.
 ```
 
-You can also paste the script the speaker read from. Claude uses it to fix misheard words, but keeps what was actually said when the speaker strays from it. Whisper reads the first 600 characters as a vocabulary hint, so put names and terms first. Setting `WHISPER_LANGUAGE` (for example `id` or `en`) also helps on noisy audio.
+You can also paste the script the speaker read from. Claude uses it to fix misheard words, but keeps what was actually said when the speaker strays from it. The context is not given to Whisper: as a prompt it made Whisper skip short lines from other speakers, and lost speech cannot be recovered later. Setting `WHISPER_LANGUAGE` (for example `id` or `en`) helps Whisper on noisy audio.
 
-The transcript is saved to `output/transcript.json`. Running again with the same video, Whisper settings and context skips transcription, so you can change the model, the colors or the prompt and get a new render in a fraction of the time.
+The transcript is saved to `output/transcript.json`. Running again with the same video and Whisper settings skips transcription, so you can change the model, the colors or the prompt and get a new render in a fraction of the time.
 
 The first run downloads the Whisper model (about 1.6 GB). Docker keeps it in the `whisper-models` volume and native runs keep it in `~/.cache/huggingface`, so later runs start right away.
 

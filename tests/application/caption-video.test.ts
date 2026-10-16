@@ -23,8 +23,8 @@ function setup(overrides: { transcribed?: Word[]; plan?: CaptionPlan } = {}) {
   const burned: { input: string; subtitles: string; output: string }[] = [];
 
   const transcriber: Transcriber = {
-    transcribe: async (path, context) => {
-      calls.push(`transcribe ${path} with ${context}`);
+    transcribe: async (path) => {
+      calls.push(`transcribe ${path}`);
       return overrides.transcribed ?? words;
     },
   };
@@ -69,12 +69,12 @@ describe("CaptionVideo", () => {
     expect(burned).toEqual([{ input: "in.mp4", subtitles: "SUBTITLES", output: "out.mp4" }]);
   });
 
-  test("gives the context to the transcriber and the planner", async () => {
+  test("gives the context to the planner only", async () => {
     const { useCase, calls } = setup();
 
     await useCase.execute({ input: "in.mp4", output: "out.mp4", context: "Dina, Kubernetes" });
 
-    expect(calls).toContain("transcribe in.mp4 with Dina, Kubernetes");
+    expect(calls).toContain("transcribe in.mp4");
     expect(calls).toContain("plan 2 with Dina, Kubernetes");
   });
 

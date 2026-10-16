@@ -3,7 +3,7 @@ import type { FrameSize } from "../domain/frame-size";
 import type { Word } from "../domain/word";
 
 export interface Transcriber {
-  transcribe(videoPath: string, context: string): Promise<Word[]>;
+  transcribe(videoPath: string): Promise<Word[]>;
 }
 
 export interface CaptionPlanner {

@@ -12,22 +12,22 @@ export class CachedTranscriber implements Transcriber {
     private readonly log: (message: string) => void,
   ) {}
 
-  async transcribe(videoPath: string, context: string): Promise<Word[]> {
-    const key = await this.cacheKey(videoPath, context);
+  async transcribe(videoPath: string): Promise<Word[]> {
+    const key = await this.cacheKey(videoPath);
     const cached = await this.read();
     if (cached?.key === key) {
       this.log(`Using cached transcript ${this.cachePath}`);
       return cached.words;
     }
 
-    const words = await this.inner.transcribe(videoPath, context);
+    const words = await this.inner.transcribe(videoPath);
     await Bun.write(this.cachePath, JSON.stringify({ key, words } satisfies CachedTranscript));
     return words;
   }
 
-  private async cacheKey(videoPath: string, context: string): Promise<string> {
+  private async cacheKey(videoPath: string): Promise<string> {
     const { size, mtimeMs } = await stat(videoPath);
-    return String(Bun.hash(JSON.stringify({ size, mtimeMs, settings: this.settingsKey, context })));
+    return String(Bun.hash(JSON.stringify({ size, mtimeMs, settings: this.settingsKey })));
   }
 
   private async read(): Promise<CachedTranscript | undefined> {

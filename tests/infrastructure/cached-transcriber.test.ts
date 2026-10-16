@@ -35,33 +35,33 @@ describe("CachedTranscriber", () => {
   afterEach(() => rm(dir, { recursive: true, force: true }));
 
   test("transcribes and saves the result the first time", async () => {
-    expect(await cached().transcribe(video, "")).toEqual(words);
+    expect(await cached().transcribe(video)).toEqual(words);
     expect(calls).toBe(1);
     expect(await Bun.file(cache).exists()).toBe(true);
   });
 
-  test("reuses the saved transcript for the same video, settings and context", async () => {
-    await cached().transcribe(video, "Dina");
+  test("reuses the saved transcript for the same video and settings", async () => {
+    await cached().transcribe(video);
 
-    expect(await cached().transcribe(video, "Dina")).toEqual(words);
+    expect(await cached().transcribe(video)).toEqual(words);
     expect(calls).toBe(1);
     expect(logs).toEqual([`Using cached transcript ${cache}`]);
   });
 
   test("transcribes again when the video changes", async () => {
-    await cached().transcribe(video, "");
+    await cached().transcribe(video);
     await Bun.write(video, "another video");
     await utimes(video, new Date(), new Date(Date.now() + 5000));
 
-    await cached().transcribe(video, "");
+    await cached().transcribe(video);
     expect(calls).toBe(2);
   });
 
-  test("transcribes again when the Whisper settings or the context change", async () => {
-    await cached().transcribe(video, "");
-    await cached("small").transcribe(video, "");
-    await cached("small").transcribe(video, "Dina");
+  test("transcribes again when the Whisper settings change", async () => {
+    await cached().transcribe(video);
+    await cached("small").transcribe(video);
+    await cached("small").transcribe(video);
 
-    expect(calls).toBe(3);
+    expect(calls).toBe(2);
   });
 });
