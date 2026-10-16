@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { CaptionStreamTracker } from "../../src/infrastructure/claude-caption-planner";
 
-const caption = (first: number) => ({ first, last: first, keywords: [] });
+const caption = (first: number) => ({ first, last: first, text: "x" });
 
 describe("CaptionStreamTracker", () => {
   test("emits a caption only once the next one has started streaming", () => {

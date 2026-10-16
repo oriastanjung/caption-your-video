@@ -1,4 +1,5 @@
-import { applyCorrections, assertValidCaptionPlan } from "../domain/caption";
+import { assertValidCaptionPlan } from "../domain/caption";
+import { buildCaptionTimeline } from "../domain/caption-timeline";
 import type { CaptionPlanner, ProgressReporter, SubtitleFormatter, Transcriber, VideoEditor } from "./ports";
 
 export class NoSpeechFoundError extends Error {
@@ -24,15 +25,15 @@ export class CaptionVideo {
     if (words.length === 0) throw new NoSpeechFoundError(`No speech found in ${input}`);
 
     reporter.stage(`Planning captions for ${words.length} words`);
-    const plan = await planner.plan(words, (caption) => reporter.captionPlanned(caption, words));
+    const plan = await planner.plan(words, (caption) => reporter.captionPlanned(caption));
     assertValidCaptionPlan(plan, words.length);
-    const correctedWords = applyCorrections(words, plan.corrections);
+    const timeline = buildCaptionTimeline(words, plan.captions);
 
-    reporter.stage(`Rendering ${plan.captions.length} captions`);
+    reporter.stage(`Rendering ${timeline.captions.length} captions`);
     const frame = await videoEditor.frameSize(input);
-    const subtitles = formatter.format(plan.captions, correctedWords, frame);
+    const subtitles = formatter.format(timeline.captions, timeline.words, frame);
     await videoEditor.burnSubtitles(input, subtitles, output);
 
-    return { captionCount: plan.captions.length };
+    return { captionCount: timeline.captions.length };
   }
 }

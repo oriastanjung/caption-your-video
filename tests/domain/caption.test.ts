@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
   InvalidCaptionPlanError,
-  applyCorrections,
   assertValidCaptionPlan,
   captionWindow,
   joinWords,
@@ -19,50 +18,29 @@ const words: Word[] = [
 ];
 
 describe("assertValidCaptionPlan", () => {
-  const valid = {
-    captions: [
-      { first: 0, last: 1, keywords: [1] },
-      { first: 2, last: 3, keywords: [] },
-    ],
-    corrections: [{ index: 3, text: "ngobrol" }],
-  };
+  const caption = (first: number, last: number, text = "x") => ({ first, last, text });
 
   test("accepts a plan that covers every word in order", () => {
-    expect(() => assertValidCaptionPlan(valid, words.length)).not.toThrow();
+    expect(() => assertValidCaptionPlan({ captions: [caption(0, 1), caption(2, 3, "")] }, words.length)).not.toThrow();
   });
 
   test("rejects a gap between captions", () => {
-    const plan = { ...valid, captions: [{ first: 0, last: 1, keywords: [] }, { first: 3, last: 3, keywords: [] }] };
+    const plan = { captions: [caption(0, 1), caption(3, 3)] };
     expect(() => assertValidCaptionPlan(plan, words.length)).toThrow(InvalidCaptionPlanError);
   });
 
   test("rejects overlapping captions", () => {
-    const plan = { ...valid, captions: [{ first: 0, last: 2, keywords: [] }, { first: 2, last: 3, keywords: [] }] };
+    const plan = { captions: [caption(0, 2), caption(2, 3)] };
     expect(() => assertValidCaptionPlan(plan, words.length)).toThrow(InvalidCaptionPlanError);
   });
 
   test("rejects a plan that stops before the last word", () => {
-    const plan = { ...valid, captions: [{ first: 0, last: 2, keywords: [] }] };
-    expect(() => assertValidCaptionPlan(plan, words.length)).toThrow(InvalidCaptionPlanError);
+    expect(() => assertValidCaptionPlan({ captions: [caption(0, 2)] }, words.length)).toThrow(InvalidCaptionPlanError);
   });
 
-  test("rejects a keyword outside its caption", () => {
-    const plan = { ...valid, captions: [{ first: 0, last: 1, keywords: [2] }, { first: 2, last: 3, keywords: [] }] };
+  test("rejects a caption whose range runs backwards", () => {
+    const plan = { captions: [caption(0, 1), caption(3, 2)] };
     expect(() => assertValidCaptionPlan(plan, words.length)).toThrow(InvalidCaptionPlanError);
-  });
-
-  test("rejects a correction outside the transcript", () => {
-    const plan = { ...valid, corrections: [{ index: 9, text: "x" }] };
-    expect(() => assertValidCaptionPlan(plan, words.length)).toThrow(InvalidCaptionPlanError);
-  });
-});
-
-describe("applyCorrections", () => {
-  test("replaces word text without mutating the input", () => {
-    const corrected = applyCorrections(words, [{ index: 2, text: "kami" }]);
-    expect(corrected[2]!.text).toBe("kami");
-    expect(corrected[2]!.start).toBe(0.6);
-    expect(words[2]!.text).toBe("kita");
   });
 });
 

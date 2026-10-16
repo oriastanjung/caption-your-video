@@ -1,8 +1,8 @@
 import type { Word } from "./word";
 
 export type Caption = { first: number; last: number; keywords: number[] };
-export type Correction = { index: number; text: string };
-export type CaptionPlan = { captions: Caption[]; corrections: Correction[] };
+export type PlannedCaption = { first: number; last: number; text: string };
+export type CaptionPlan = { captions: PlannedCaption[] };
 export type WordState = "upcoming" | "active" | "spoken" | "keyword";
 
 export class InvalidCaptionPlanError extends Error {
@@ -17,25 +17,11 @@ export function assertValidCaptionPlan(plan: CaptionPlan, wordCount: number): vo
     if (caption.first !== expectedFirst || caption.last < caption.first) {
       throw new InvalidCaptionPlanError(`Captions have a gap or overlap at word ${expectedFirst}`);
     }
-    const strayKeyword = caption.keywords.find((index) => index < caption.first || index > caption.last);
-    if (strayKeyword !== undefined) {
-      throw new InvalidCaptionPlanError(`Keyword ${strayKeyword} is outside caption ${caption.first}-${caption.last}`);
-    }
     expectedFirst = caption.last + 1;
   }
   if (expectedFirst !== wordCount) {
     throw new InvalidCaptionPlanError(`Captions cover ${expectedFirst} of ${wordCount} words`);
   }
-  const strayCorrection = plan.corrections.find(({ index }) => index < 0 || index >= wordCount);
-  if (strayCorrection) {
-    throw new InvalidCaptionPlanError(`Correction index ${strayCorrection.index} is outside the transcript`);
-  }
-}
-
-export function applyCorrections(words: Word[], corrections: Correction[]): Word[] {
-  const corrected = words.map((word) => ({ ...word }));
-  for (const { index, text } of corrections) corrected[index]!.text = text;
-  return corrected;
 }
 
 export function wordState(caption: Caption, index: number, active: number): WordState {

@@ -7,7 +7,7 @@ import type {
   Transcriber,
   VideoEditor,
 } from "../../src/application/ports";
-import { InvalidCaptionPlanError, type Caption, type CaptionPlan } from "../../src/domain/caption";
+import { InvalidCaptionPlanError, type Caption, type CaptionPlan, type PlannedCaption } from "../../src/domain/caption";
 import type { FrameSize } from "../../src/domain/frame-size";
 import type { Word } from "../../src/domain/word";
 
@@ -15,10 +15,7 @@ const words: Word[] = [
   { text: "Halo", start: 0, end: 0.4 },
   { text: "dunai", start: 0.5, end: 0.9 },
 ];
-const plan: CaptionPlan = {
-  captions: [{ first: 0, last: 1, keywords: [1] }],
-  corrections: [{ index: 1, text: "dunia" }],
-};
+const plan: CaptionPlan = { captions: [{ first: 0, last: 1, text: "Halo *dunia*" }] };
 
 function setup(overrides: { transcribed?: Word[]; plan?: CaptionPlan } = {}) {
   const calls: string[] = [];
@@ -51,7 +48,7 @@ function setup(overrides: { transcribed?: Word[]; plan?: CaptionPlan } = {}) {
       burned.push({ input, subtitles, output });
     },
   };
-  const planned: Caption[] = [];
+  const planned: PlannedCaption[] = [];
   const reporter: ProgressReporter = {
     stage: (message) => calls.push(`stage ${message}`),
     captionPlanned: (caption) => planned.push(caption),
@@ -72,12 +69,16 @@ describe("CaptionVideo", () => {
     expect(burned).toEqual([{ input: "in.mp4", subtitles: "SUBTITLES", output: "out.mp4" }]);
   });
 
-  test("formats the corrected words, not the raw transcript", async () => {
+  test("formats the planned caption text with the transcript's timing", async () => {
     const { useCase, formatted } = setup();
 
     await useCase.execute({ input: "in.mp4", output: "out.mp4" });
 
-    expect(formatted[0]!.words.map((word) => word.text)).toEqual(["Halo", "dunia"]);
+    expect(formatted[0]!.words).toEqual([
+      { text: "Halo", start: 0, end: 0.4 },
+      { text: "dunia", start: 0.5, end: 0.9 },
+    ]);
+    expect(formatted[0]!.captions).toEqual([{ first: 0, last: 1, keywords: [1] }]);
   });
 
   test("streams every planned caption to the reporter", async () => {
@@ -97,7 +98,7 @@ describe("CaptionVideo", () => {
   });
 
   test("refuses to render a plan that skips words", async () => {
-    const { useCase, burned } = setup({ plan: { captions: [{ first: 0, last: 0, keywords: [] }], corrections: [] } });
+    const { useCase, burned } = setup({ plan: { captions: [{ first: 0, last: 0, text: "Halo" }] } });
 
     await expect(useCase.execute({ input: "in.mp4", output: "out.mp4" })).rejects.toThrow(InvalidCaptionPlanError);
     expect(burned).toEqual([]);

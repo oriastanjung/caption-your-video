@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { CaptionPlanner } from "../application/ports";
-import type { Caption, CaptionPlan } from "../domain/caption";
+import type { CaptionPlan, PlannedCaption } from "../domain/caption";
 import type { Word } from "../domain/word";
 
 const MAX_OUTPUT_TOKENS = 32000;
@@ -19,37 +19,29 @@ const saveCaptionsTool: Anthropic.Tool = {
           properties: {
             first: { type: "integer" },
             last: { type: "integer" },
-            keywords: { type: "array", items: { type: "integer" } },
+            text: { type: "string" },
           },
-          required: ["first", "last", "keywords"],
-        },
-      },
-      corrections: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: { index: { type: "integer" }, text: { type: "string" } },
-          required: ["index", "text"],
+          required: ["first", "last", "text"],
         },
       },
     },
-    required: ["captions", "corrections"],
+    required: ["captions"],
   },
 };
 
 export class CaptionStreamTracker {
   private emitted = 0;
 
-  completed(snapshot: Partial<CaptionPlan>): Caption[] {
+  completed(snapshot: Partial<CaptionPlan>): PlannedCaption[] {
     const captions = snapshot.captions ?? [];
     return this.takeUpTo(captions, captions.length - 1);
   }
 
-  remaining(captions: Caption[]): Caption[] {
+  remaining(captions: PlannedCaption[]): PlannedCaption[] {
     return this.takeUpTo(captions, captions.length);
   }
 
-  private takeUpTo(captions: Caption[], end: number): Caption[] {
+  private takeUpTo(captions: PlannedCaption[], end: number): PlannedCaption[] {
     if (end <= this.emitted) return [];
     const fresh = captions.slice(this.emitted, end);
     this.emitted = end;
@@ -64,7 +56,7 @@ export class ClaudeCaptionPlanner implements CaptionPlanner {
     private readonly systemPrompt: string,
   ) {}
 
-  async plan(words: Word[], onCaption: (caption: Caption) => void): Promise<CaptionPlan> {
+  async plan(words: Word[], onCaption: (caption: PlannedCaption) => void): Promise<CaptionPlan> {
     const tracker = new CaptionStreamTracker();
     const stream = this.client.messages.stream({
       model: this.model,
