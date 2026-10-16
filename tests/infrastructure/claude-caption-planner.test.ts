@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { InvalidCaptionPlanError, type PlannedCaption } from "../../src/domain/caption";
 import type { Word } from "../../src/domain/word";
-import { planInChunks, splitIntoChunks, type ChunkRequest } from "../../src/infrastructure/claude-caption-planner";
+import { chunkMessage, planInChunks, splitIntoChunks, type ChunkRequest } from "../../src/infrastructure/claude-caption-planner";
 
 const toWords = (texts: string[]): Word[] => texts.map((text, index) => ({ text, start: index, end: index + 1 }));
 
@@ -30,7 +30,7 @@ describe("planInChunks", () => {
 
   test("plans each chunk with global indices and joins the results", async () => {
     const requests: ChunkRequest[] = [];
-    const plan = await planInChunks(words, { targetWords: 2, maxWords: 2 }, async (request) => {
+    const plan = await planInChunks(words, "", { targetWords: 2, maxWords: 2 }, async (request) => {
       requests.push(request);
       return wholeChunk(request);
     }, () => {});
@@ -41,7 +41,7 @@ describe("planInChunks", () => {
 
   test("sends the captions planned so far with each chunk", async () => {
     const previous: string[][] = [];
-    await planInChunks(words, { targetWords: 2, maxWords: 2 }, async (request) => {
+    await planInChunks(words, "", { targetWords: 2, maxWords: 2 }, async (request) => {
       previous.push(request.previousCaptions);
       return wholeChunk(request);
     }, () => {});
@@ -49,9 +49,19 @@ describe("planInChunks", () => {
     expect(previous).toEqual([[], ["0-1"]]);
   });
 
+  test("sends the context with every chunk", async () => {
+    const contexts: string[] = [];
+    await planInChunks(words, "Dina", { targetWords: 2, maxWords: 2 }, async (request) => {
+      contexts.push(request.context);
+      return wholeChunk(request);
+    }, () => {});
+
+    expect(contexts).toEqual(["Dina", "Dina"]);
+  });
+
   test("reports each caption once its chunk is valid", async () => {
     const reported: string[] = [];
-    await planInChunks(words, { targetWords: 2, maxWords: 2 }, async (request) => wholeChunk(request), (caption) =>
+    await planInChunks(words, "", { targetWords: 2, maxWords: 2 }, async (request) => wholeChunk(request), (caption) =>
       reported.push(caption.text),
     );
 
@@ -60,7 +70,7 @@ describe("planInChunks", () => {
 
   test("retries a chunk once when the model skips words", async () => {
     let calls = 0;
-    const plan = await planInChunks(words, { targetWords: 4, maxWords: 4 }, async (request) => {
+    const plan = await planInChunks(words, "", { targetWords: 4, maxWords: 4 }, async (request) => {
       calls += 1;
       return calls === 1 ? [{ first: 0, last: 1, text: "partial" }] : wholeChunk(request);
     }, () => {});
@@ -71,7 +81,7 @@ describe("planInChunks", () => {
 
   test("retries a chunk once when the model returns no captions", async () => {
     let calls = 0;
-    const plan = await planInChunks(words, { targetWords: 4, maxWords: 4 }, async (request) => {
+    const plan = await planInChunks(words, "", { targetWords: 4, maxWords: 4 }, async (request) => {
       calls += 1;
       if (calls === 1) throw new InvalidCaptionPlanError("no tool call");
       return wholeChunk(request);
@@ -83,8 +93,24 @@ describe("planInChunks", () => {
   test("fails when the retry is also invalid", async () => {
     const skipWords = async () => [{ first: 0, last: 0, text: "partial" }];
 
-    await expect(planInChunks(words, { targetWords: 4, maxWords: 4 }, skipWords, () => {})).rejects.toThrow(
+    await expect(planInChunks(words, "", { targetWords: 4, maxWords: 4 }, skipWords, () => {})).rejects.toThrow(
       InvalidCaptionPlanError,
     );
+  });
+});
+
+describe("chunkMessage", () => {
+  const request: ChunkRequest = { first: 4, last: 5, transcript: "4|Halo\n5|semua", previousCaptions: [], context: "" };
+
+  test("includes the user's context when there is one", () => {
+    expect(chunkMessage({ ...request, context: "Speaker: Dina" })).toContain("<context>\nSpeaker: Dina\n</context>");
+  });
+
+  test("leaves the context block out when there is none", () => {
+    expect(chunkMessage(request)).not.toContain("<context>");
+  });
+
+  test("asks for exactly the chunk's indices", () => {
+    expect(chunkMessage(request)).toContain("Caption every index from 4 to 5.");
   });
 });

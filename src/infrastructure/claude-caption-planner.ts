@@ -13,7 +13,7 @@ const SENTENCE_END = /[.?!]$/;
 type ChunkSize = { targetWords: number; maxWords: number };
 type Range = { first: number; last: number };
 
-export type ChunkRequest = Range & { transcript: string; previousCaptions: string[] };
+export type ChunkRequest = Range & { transcript: string; previousCaptions: string[]; context: string };
 type RequestChunk = (request: ChunkRequest) => Promise<PlannedCaption[]>;
 
 const saveCaptionsTool: Anthropic.Tool = {
@@ -60,6 +60,7 @@ export function splitIntoChunks(words: Word[], { targetWords, maxWords }: ChunkS
 
 export async function planInChunks(
   words: Word[],
+  context: string,
   size: ChunkSize,
   requestChunk: RequestChunk,
   onCaption: (caption: PlannedCaption) => void,
@@ -74,6 +75,7 @@ export async function planInChunks(
         .map((word, offset) => `${first + offset}|${word.text}`)
         .join("\n"),
       previousCaptions: captions.slice(-PREVIOUS_CAPTIONS_SENT).map((caption) => caption.text),
+      context,
     };
     const planned = await planChunkWithRetry(request, requestChunk);
     planned.forEach(onCaption);
@@ -104,8 +106,8 @@ export class ClaudeCaptionPlanner implements CaptionPlanner {
     private readonly systemPrompt: string,
   ) {}
 
-  plan(words: Word[], onCaption: (caption: PlannedCaption) => void): Promise<CaptionPlan> {
-    return planInChunks(words, CHUNK_SIZE, (request) => this.requestChunk(request), onCaption);
+  plan(words: Word[], context: string, onCaption: (caption: PlannedCaption) => void): Promise<CaptionPlan> {
+    return planInChunks(words, context, CHUNK_SIZE, (request) => this.requestChunk(request), onCaption);
   }
 
   private async requestChunk(request: ChunkRequest): Promise<PlannedCaption[]> {
@@ -123,9 +125,11 @@ export class ClaudeCaptionPlanner implements CaptionPlanner {
   }
 }
 
-function chunkMessage({ first, last, transcript, previousCaptions }: ChunkRequest): string {
+export function chunkMessage({ first, last, transcript, previousCaptions, context }: ChunkRequest): string {
   const previous = previousCaptions.length > 0 ? previousCaptions.join("\n") : "(none, this is the start)";
+  const contextBlock = context ? ["<context>", context, "</context>", ""] : [];
   return [
+    ...contextBlock,
     "<captions_so_far>",
     previous,
     "</captions_so_far>",

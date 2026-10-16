@@ -23,14 +23,14 @@ function setup(overrides: { transcribed?: Word[]; plan?: CaptionPlan } = {}) {
   const burned: { input: string; subtitles: string; output: string }[] = [];
 
   const transcriber: Transcriber = {
-    transcribe: async (path) => {
-      calls.push(`transcribe ${path}`);
+    transcribe: async (path, context) => {
+      calls.push(`transcribe ${path} with ${context}`);
       return overrides.transcribed ?? words;
     },
   };
   const planner: CaptionPlanner = {
-    plan: async (input, onCaption) => {
-      calls.push(`plan ${input.length}`);
+    plan: async (input, context, onCaption) => {
+      calls.push(`plan ${input.length} with ${context}`);
       const result = overrides.plan ?? plan;
       result.captions.forEach(onCaption);
       return result;
@@ -62,17 +62,26 @@ describe("CaptionVideo", () => {
   test("transcribes, plans, formats and burns captions into the output video", async () => {
     const { useCase, formatted, burned } = setup();
 
-    const result = await useCase.execute({ input: "in.mp4", output: "out.mp4" });
+    const result = await useCase.execute({ input: "in.mp4", output: "out.mp4", context: "Dina" });
 
     expect(result).toEqual({ captionCount: 1 });
     expect(formatted[0]!.frame).toEqual({ width: 1920, height: 1080 });
     expect(burned).toEqual([{ input: "in.mp4", subtitles: "SUBTITLES", output: "out.mp4" }]);
   });
 
+  test("gives the context to the transcriber and the planner", async () => {
+    const { useCase, calls } = setup();
+
+    await useCase.execute({ input: "in.mp4", output: "out.mp4", context: "Dina, Kubernetes" });
+
+    expect(calls).toContain("transcribe in.mp4 with Dina, Kubernetes");
+    expect(calls).toContain("plan 2 with Dina, Kubernetes");
+  });
+
   test("formats the planned caption text with the transcript's timing", async () => {
     const { useCase, formatted } = setup();
 
-    await useCase.execute({ input: "in.mp4", output: "out.mp4" });
+    await useCase.execute({ input: "in.mp4", output: "out.mp4", context: "Dina" });
 
     expect(formatted[0]!.words).toEqual([
       { text: "Halo", start: 0, end: 0.4 },
@@ -84,7 +93,7 @@ describe("CaptionVideo", () => {
   test("streams every planned caption to the reporter", async () => {
     const { useCase, planned } = setup();
 
-    await useCase.execute({ input: "in.mp4", output: "out.mp4" });
+    await useCase.execute({ input: "in.mp4", output: "out.mp4", context: "Dina" });
 
     expect(planned).toEqual(plan.captions);
   });
@@ -92,7 +101,7 @@ describe("CaptionVideo", () => {
   test("stops before planning when the video has no speech", async () => {
     const { useCase, calls, burned } = setup({ transcribed: [] });
 
-    await expect(useCase.execute({ input: "in.mp4", output: "out.mp4" })).rejects.toThrow(NoSpeechFoundError);
+    await expect(useCase.execute({ input: "in.mp4", output: "out.mp4", context: "Dina" })).rejects.toThrow(NoSpeechFoundError);
     expect(calls.some((call) => call.startsWith("plan"))).toBe(false);
     expect(burned).toEqual([]);
   });
@@ -100,7 +109,7 @@ describe("CaptionVideo", () => {
   test("refuses to render a plan that skips words", async () => {
     const { useCase, burned } = setup({ plan: { captions: [{ first: 0, last: 0, text: "Halo" }] } });
 
-    await expect(useCase.execute({ input: "in.mp4", output: "out.mp4" })).rejects.toThrow(InvalidCaptionPlanError);
+    await expect(useCase.execute({ input: "in.mp4", output: "out.mp4", context: "Dina" })).rejects.toThrow(InvalidCaptionPlanError);
     expect(burned).toEqual([]);
   });
 });

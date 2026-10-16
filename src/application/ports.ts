@@ -3,11 +3,11 @@ import type { FrameSize } from "../domain/frame-size";
 import type { Word } from "../domain/word";
 
 export interface Transcriber {
-  transcribe(videoPath: string): Promise<Word[]>;
+  transcribe(videoPath: string, context: string): Promise<Word[]>;
 }
 
 export interface CaptionPlanner {
-  plan(words: Word[], onCaption: (caption: PlannedCaption) => void): Promise<CaptionPlan>;
+  plan(words: Word[], context: string, onCaption: (caption: PlannedCaption) => void): Promise<CaptionPlan>;
 }
 
 export interface SubtitleFormatter {

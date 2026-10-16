@@ -10,6 +10,7 @@ import { WhisperTranscriber } from "./src/infrastructure/whisper-transcriber";
 
 const INPUT = "input/input.mp4";
 const OUTPUT = "output/output.mp4";
+const CONTEXT = "input/context.txt";
 const SYSTEM_PROMPT = "prompts/segment.md";
 
 if (!(await Bun.file(INPUT).exists())) {
@@ -28,5 +29,9 @@ const captionVideo = new CaptionVideo({
   reporter: new ConsoleProgressReporter(),
 });
 
-const { captionCount } = await captionVideo.execute({ input: INPUT, output: OUTPUT });
+const contextFile = Bun.file(CONTEXT);
+const context = (await contextFile.exists()) ? (await contextFile.text()).trim() : "";
+if (context) console.log(`Using context from ${CONTEXT}`);
+
+const { captionCount } = await captionVideo.execute({ input: INPUT, output: OUTPUT, context });
 console.log(`\nDone: ${OUTPUT} (${captionCount} captions)`);
