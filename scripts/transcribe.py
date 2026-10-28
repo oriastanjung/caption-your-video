@@ -1,11 +1,26 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["faster-whisper>=1.1", "av<19"]
+# dependencies = ["faster-whisper>=1.1", "av<19", "numpy"]
 # ///
 import json
+import subprocess
 import sys
 
+import numpy as np
 from faster_whisper import WhisperModel
+
+SAMPLE_RATE = 16000
+INT16_SCALE = 32768
+
+
+def load_leveled_audio(video_path: str) -> np.ndarray:
+    # Quiet speech next to loud typing gets dropped by VAD and Whisper unless levels are evened out first.
+    pcm = subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", video_path, "-vn", "-af", "dynaudnorm", "-ac", "1", "-ar", str(SAMPLE_RATE), "-f", "s16le", "-"],
+        capture_output=True,
+        check=True,
+    ).stdout
+    return np.frombuffer(pcm, np.int16).astype(np.float32) / INT16_SCALE
 
 
 def main() -> None:
@@ -16,12 +31,14 @@ def main() -> None:
 
     model = WhisperModel(model_name, device="cpu", compute_type="int8")
     segments, info = model.transcribe(
-        video_path,
+        load_leveled_audio(video_path),
         language=None if language == "auto" else language,
         word_timestamps=True,
         vad_filter=True,
         # Feeding earlier text back in makes Whisper repeat itself over silence and noise.
         condition_on_previous_text=False,
+        # VAD already drops silence; this second check skipped whole 30 s windows of quiet speech.
+        no_speech_threshold=None,
         beam_size=5,
     )
 

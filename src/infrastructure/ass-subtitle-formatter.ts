@@ -22,7 +22,7 @@ const BOX_PADDING_X = 0.68;
 const BOX_HEIGHT = 1.6;
 const BOX_RADIUS = 0.36;
 const MAX_BOX_WIDTH_OF_FRAME = 0.9;
-const CAPTION_CENTER_Y_OF_FRAME = 0.82;
+const CAPTION_CENTER_Y_OF_FRAME = 0.87;
 
 export function toAssColor({ red, green, blue }: Color, opacity = 1): string {
   const hex = (value: number) => value.toString(16).padStart(2, "0").toUpperCase();
@@ -73,6 +73,10 @@ export class AssSubtitleFormatter implements SubtitleFormatter {
   private captionEvents(captions: Caption[], words: Word[], index: number, frame: FrameSize, fontSize: number) {
     const caption = captions[index]!;
     const { start, end } = captionWindow(captions, words, index, HOLD_AFTER_LAST_WORD_SECONDS);
+    const previousEnd = index > 0 ? captionWindow(captions, words, index - 1, HOLD_AFTER_LAST_WORD_SECONDS).end : -Infinity;
+    const next = captions[index + 1];
+    const fadeIn = previousEnd < start ? FADE_MS : 0;
+    const fadeOut = !next || end < words[next.first]!.start ? FADE_MS : 0;
     const texts = words.slice(caption.first, caption.last + 1).map((word) => word.text);
 
     const naturalWidth = this.measureText(joinWords(texts), fontSize) + fontSize * BOX_PADDING_X * 2;
@@ -80,15 +84,15 @@ export class AssSubtitleFormatter implements SubtitleFormatter {
     const position = `\\an5\\pos(${round(frame.width / 2)},${round(frame.height * CAPTION_CENTER_Y_OF_FRAME)})`;
     const pop = `\\fscx${POP_FROM_PERCENT}\\fscy${POP_FROM_PERCENT}\\t(0,${POP_MS},\\fscx100\\fscy100)`;
     const shape = roundedRect(naturalWidth * scale, fontSize * BOX_HEIGHT * scale, fontSize * BOX_RADIUS * scale);
-    const box = dialogue(0, start, end, "Box", `{${position}${pop}\\fad(${FADE_MS},${FADE_MS})\\p1}${shape}`);
+    const box = dialogue(0, start, end, "Box", `{${position}${pop}\\fad(${fadeIn},${fadeOut})\\p1}${shape}`);
 
     const states = [];
     for (let active = caption.first; active <= caption.last; active++) {
       const stateStart = active === caption.first ? start : words[active]!.start;
       const stateEnd = active === caption.last ? end : words[active + 1]!.start;
       if (stateEnd <= stateStart) continue;
-      const enter = active === caption.first ? `${pop}\\fad(${FADE_MS},0)` : "";
-      const leave = active === caption.last ? `\\fad(0,${FADE_MS})` : "";
+      const enter = active === caption.first ? `${pop}\\fad(${fadeIn},0)` : "";
+      const leave = active === caption.last ? `\\fad(0,${fadeOut})` : "";
       const tags = `{${position}\\fs${round(fontSize * scale)}${enter}${leave}}`;
       states.push(dialogue(1, stateStart, stateEnd, "Text", tags + this.coloredText(caption, words, active)));
     }

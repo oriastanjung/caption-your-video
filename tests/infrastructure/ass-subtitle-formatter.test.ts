@@ -86,6 +86,34 @@ describe("AssSubtitleFormatter", () => {
     expect(fontSize).toBeLessThan(54);
   });
 
+  test("places the caption box center low in the frame", () => {
+    expect(lines[0]).toContain("\\pos(960,939.6)");
+  });
+
+  test("swaps back-to-back captions without fading, so no see-through ghost shows between them", () => {
+    const pair: Word[] = [
+      { text: "satu", start: 0, end: 0.5 },
+      { text: "dua", start: 0.5, end: 1 },
+    ];
+    const split = [
+      { first: 0, last: 0, keywords: [] },
+      { first: 1, last: 1, keywords: [] },
+    ];
+    const [firstBox, firstText, secondBox, secondText] = dialogues(
+      new AssSubtitleFormatter(theme, charWidth).format(split, pair, frame),
+    );
+    expect(firstBox).toContain("\\fad(90,0)");
+    expect(firstText).toContain("\\fad(90,0)");
+    expect(secondBox).toContain("\\fad(0,90)");
+    expect(secondText).toContain("\\fad(0,90)");
+  });
+
+  test("fades a caption in and out when silence surrounds it", () => {
+    expect(lines[0]).toContain("\\fad(90,90)");
+    expect(lines[1]).toContain("\\fad(90,0)");
+    expect(lines[3]).toContain("\\fad(0,90)");
+  });
+
   test("strips characters that would break ASS override tags", () => {
     const risky = [{ text: "a{\\b1}b", start: 0, end: 1 }];
     const ass = new AssSubtitleFormatter(theme, charWidth).format([{ first: 0, last: 0, keywords: [] }], risky, frame);

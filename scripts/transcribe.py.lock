@@ -11,6 +11,7 @@ resolution-markers = [
 requirements = [
     { name = "av", specifier = "<19" },
     { name = "faster-whisper", specifier = ">=1.1" },
+    { name = "numpy" },
 ]
 
 [[package]]
