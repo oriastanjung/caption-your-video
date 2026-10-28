@@ -4,6 +4,7 @@ import { AssSubtitleFormatter } from "./src/infrastructure/ass-subtitle-formatte
 import { CachedTranscriber } from "./src/infrastructure/cached-transcriber";
 import { ClaudeCaptionPlanner } from "./src/infrastructure/claude-caption-planner";
 import { loadConfig } from "./src/infrastructure/config";
+import { readContextFiles } from "./src/infrastructure/context-files";
 import { ConsoleProgressReporter } from "./src/infrastructure/console-progress-reporter";
 import { FfmpegVideoEditor } from "./src/infrastructure/ffmpeg-video-editor";
 import { FONT_FILE, FONTS_DIR, createTextMeasurer } from "./src/infrastructure/fontkit-text-measurer";
@@ -12,7 +13,7 @@ import { WhisperTranscriber } from "./src/infrastructure/whisper-transcriber";
 const INPUT = "input/input.mp4";
 const OUTPUT = "output/output.mp4";
 const TRANSCRIPT_CACHE = "output/transcript.json";
-const CONTEXT = "input/context.txt";
+const CONTEXT_FILES = ["input/context.txt", "input/story.md"];
 const SYSTEM_PROMPT = "prompts/segment.md";
 
 if (!(await Bun.file(INPUT).exists())) {
@@ -36,9 +37,8 @@ const captionVideo = new CaptionVideo({
   reporter: new ConsoleProgressReporter(),
 });
 
-const contextFile = Bun.file(CONTEXT);
-const context = (await contextFile.exists()) ? (await contextFile.text()).trim() : "";
-if (context) console.log(`Using context from ${CONTEXT}`);
+const context = await readContextFiles(CONTEXT_FILES);
+if (context) console.log(`Using context from ${CONTEXT_FILES.join(" and ")}`);
 
 const { captionCount } = await captionVideo.execute({ input: INPUT, output: OUTPUT, context });
 console.log(`\nDone: ${OUTPUT} (${captionCount} captions)`);

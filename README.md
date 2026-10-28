@@ -27,7 +27,7 @@ Captions in motion: upcoming words are grey, the spoken word lights up yellow, s
 
 - Word-level timing from local Whisper (`large-v3-turbo` by default). Works for any language Whisper supports; tested with English and Indonesian.
 - Claude plans the captions: short one-line chunks that follow the speaker's rhythm, highlighted keywords, misheard words fixed from context, and lines Whisper made up dropped. Long videos are planned in chunks.
-- Optional `input/context.txt` with names, terms or the speaker's script for hard audio.
+- Optional `input/context.txt` and `input/story.md` with names, terms, the speaker's script or what happens on screen, for hard audio.
 - Live progress in the terminal: transcript lines, captions as each chunk is planned, then the ffmpeg render.
 - Caption colors and box opacity are set from `.env`.
 - Works with the official Anthropic API, [9router](https://github.com/decolua/9router), or any Anthropic-compatible gateway: set `ANTHROPIC_BASE_URL`.
@@ -81,7 +81,7 @@ Speaker: Dina, data engineer at Example Corp.
 Terms: Kubernetes, Docker Compose, PostgreSQL, ETL.
 ```
 
-You can also paste the script the speaker read from. Claude uses it to fix misheard words, but keeps what was actually said when the speaker strays from it. The context is not given to Whisper: as a prompt it made Whisper skip short lines from other speakers, and lost speech cannot be recovered later. Setting `WHISPER_LANGUAGE` (for example `id` or `en`) helps Whisper on noisy audio.
+Put the script the speaker read from, or a walkthrough of what happens on screen, in `input/story.md`. Claude gets both files together. Claude uses it to fix misheard words, but keeps what was actually said when the speaker strays from it. The context is not given to Whisper: as a prompt it made Whisper skip short lines from other speakers, and lost speech cannot be recovered later. Setting `WHISPER_LANGUAGE` (for example `id` or `en`) helps Whisper on noisy audio.
 
 The transcript is saved to `output/transcript.json`. Running again with the same video and Whisper settings skips transcription, so you can change the model, the colors or the prompt and get a new render in a fraction of the time.
 
@@ -137,7 +137,8 @@ Caption quality depends on the model. Long captions are always split to fit on s
 
 ```
 input/input.mp4
-  + input/context.txt (optional) names, terms or script
+  + input/context.txt (optional) names and terms
+  + input/story.md    (optional) script or on-screen walkthrough
   -> Whisper (local)            words with start and end times, cached
   -> Claude, in chunks          caption breaks, fixed text, keywords, invented lines dropped
   -> domain rules               every word covered in order, long captions split
