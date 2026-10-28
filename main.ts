@@ -8,7 +8,7 @@ import { readContextFiles } from "./src/infrastructure/context-files";
 import { ConsoleProgressReporter } from "./src/infrastructure/console-progress-reporter";
 import { FfmpegVideoEditor } from "./src/infrastructure/ffmpeg-video-editor";
 import { FONT_FILE, FONTS_DIR, createTextMeasurer } from "./src/infrastructure/fontkit-text-measurer";
-import { WhisperTranscriber } from "./src/infrastructure/whisper-transcriber";
+import { WHISPER_SCRIPT, WhisperTranscriber } from "./src/infrastructure/whisper-transcriber";
 
 const INPUT = "input/input.mp4";
 const OUTPUT = "output/output.mp4";
@@ -28,7 +28,11 @@ const captionVideo = new CaptionVideo({
   transcriber: new CachedTranscriber(
     new WhisperTranscriber(config.whisper),
     TRANSCRIPT_CACHE,
-    JSON.stringify({ model: config.whisper.model, language: config.whisper.language }),
+    JSON.stringify({
+      model: config.whisper.model,
+      language: config.whisper.language,
+      script: Bun.hash(await Bun.file(WHISPER_SCRIPT).text()).toString(),
+    }),
     (message) => console.log(message),
   ),
   planner: new ClaudeCaptionPlanner(client, config.anthropic.model, await Bun.file(SYSTEM_PROMPT).text()),
